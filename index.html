@@ -1,13 +1,482 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J.A.R.V.I.S.</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J.A.R.V.I.S.</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at center, #071b25 0%, #020609 45%, #000 100%);
+    color: #00d9ff;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+.container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+}
+
+h1 {
+    font-size: 42px;
+    letter-spacing: 10px;
+    margin: 0;
+    text-shadow: 0 0 20px #00d9ff;
+}
+
+.status {
+    margin-top: 8px;
+    font-size: 12px;
+    letter-spacing: 4px;
+    opacity: 0.7;
+}
+
+.core {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin: 35px 0;
+}
+
+.ring {
+    position: absolute;
+    border: 2px solid #00d9ff;
+    border-radius: 50%;
+    box-shadow: 0 0 15px #00d9ff;
+}
+
+.ring1 {
+    width: 260px;
+    height: 260px;
+    animation: rotate 8s linear infinite;
+    border-left-color: transparent;
+    border-right-color: transparent;
+}
+
+.ring2 {
+    width: 210px;
+    height: 210px;
+    top: 25px;
+    left: 25px;
+    animation: reverseRotate 5s linear infinite;
+    border-top-color: transparent;
+}
+
+.ring3 {
+    width: 155px;
+    height: 155px;
+    top: 52px;
+    left: 52px;
+    animation: rotate 3s linear infinite;
+    border-bottom-color: transparent;
+}
+
+.center {
+    position: absolute;
+    width: 55px;
+    height: 55px;
+    background: #00d9ff;
+    border-radius: 50%;
+    top: 102px;
+    left: 102px;
+    box-shadow:
+        0 0 20px #00d9ff,
+        0 0 50px #00d9ff,
+        0 0 90px #00d9ff;
+    animation: pulse 1.5s infinite;
+}
+
+button {
+    border: 2px solid #00d9ff;
+    background: rgba(0, 217, 255, 0.05);
+    color: #00d9ff;
+    padding: 16px 28px;
+    border-radius: 40px;
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    box-shadow: 0 0 15px rgba(0,217,255,0.3);
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(0.95);
+    background: #00d9ff;
+    color: #001018;
+}
+
+.response {
+    width: 90%;
+    max-width: 500px;
+    min-height: 50px;
+    margin-top: 25px;
+    font-size: 17px;
+    line-height: 1.5;
+}
+
+.commands {
+    margin-top: 10px;
+    font-size: 11px;
+    opacity: 0.45;
+    max-width: 500px;
+}
+
+.listening .center {
+    background: #ffffff;
+    box-shadow:
+        0 0 30px #ffffff,
+        0 0 70px #00d9ff,
+        0 0 120px #00d9ff;
+}
+
+.listening .ring {
+    animation-duration: 1.5s;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes reverseRotate {
+    from {
+        transform: rotate(360deg);
+    }
+
+    to {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+}
+</style>
 </head>
 
 <body>
+
+<div class="container" id="jarvis">
+
     <h1>J.A.R.V.I.S.</h1>
-    <p>Buenas tardes, señor.</p>
+
+    <div class="status" id="status">
+        SISTEMA EN ESPERA
+    </div>
+
+    <div class="core">
+        <div class="ring ring1"></div>
+        <div class="ring ring2"></div>
+        <div class="ring ring3"></div>
+        <div class="center"></div>
+    </div>
+
+    <button id="talk">
+        🎙️ ACTIVAR JARVIS
+    </button>
+
+    <div class="response" id="response">
+        Esperando instrucciones, señor.
+    </div>
+
+    <div class="commands">
+        Prueba: "¿Qué hora es?", "abre YouTube",
+        "busca Spider-Man", "hola Jarvis"
+    </div>
+
+</div>
+
+<script>
+
+const button = document.getElementById("talk");
+const statusText = document.getElementById("status");
+const response = document.getElementById("response");
+const jarvis = document.getElementById("jarvis");
+
+let recognition;
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+
+    recognition = new SpeechRecognition();
+
+    recognition.lang = "es-ES";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = function() {
+
+        jarvis.classList.add("listening");
+
+        statusText.textContent = "ESCUCHANDO...";
+        response.textContent = "Le escucho, señor.";
+        button.textContent = "🔵 ESCUCHANDO";
+    };
+
+    recognition.onresult = function(event) {
+
+        const text =
+            event.results[0][0].transcript.toLowerCase();
+
+        statusText.textContent = "PROCESANDO...";
+
+        processCommand(text);
+    };
+
+    recognition.onerror = function() {
+
+        statusText.textContent = "ERROR DE MICRÓFONO";
+        response.textContent =
+            "No he podido escucharle, señor.";
+
+        jarvis.classList.remove("listening");
+
+        button.textContent = "🎙️ ACTIVAR JARVIS";
+    };
+
+    recognition.onend = function() {
+
+        jarvis.classList.remove("listening");
+
+        button.textContent = "🎙️ ACTIVAR JARVIS";
+    };
+
+} else {
+
+    response.textContent =
+        "Su navegador no admite reconocimiento de voz.";
+}
+
+
+button.addEventListener("click", function() {
+
+    if (!recognition) return;
+
+    try {
+        recognition.start();
+    } catch (error) {
+        console.log(error);
+    }
+
+});
+
+
+function speak(text) {
+
+    speechSynthesis.cancel();
+
+    const voice =
+        new SpeechSynthesisUtterance(text);
+
+    voice.lang = "es-ES";
+    voice.rate = 0.9;
+    voice.pitch = 0.9;
+
+    speechSynthesis.speak(voice);
+}
+
+
+function answer(text) {
+
+    statusText.textContent = "J.A.R.V.I.S. ACTIVO";
+
+    response.textContent = text;
+
+    speak(text);
+}
+
+
+function processCommand(command) {
+
+    console.log("Comando:", command);
+
+
+    // SALUDO
+
+    if (
+        command.includes("hola") ||
+        command.includes("buenas")
+    ) {
+
+        answer(
+            "Buenas tardes, señor. Todos los sistemas están funcionando correctamente."
+        );
+
+        return;
+    }
+
+
+    // HORA
+
+    if (
+        command.includes("hora") ||
+        command.includes("qué hora")
+    ) {
+
+        const now = new Date();
+
+        const time =
+            now.toLocaleTimeString(
+                "es-ES",
+                {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }
+            );
+
+        answer(
+            "Son las " + time + ", señor."
+        );
+
+        return;
+    }
+
+
+    // FECHA
+
+    if (
+        command.includes("fecha") ||
+        command.includes("día es hoy") ||
+        command.includes("qué día")
+    ) {
+
+        const date =
+            new Date().toLocaleDateString(
+                "es-ES",
+                {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long"
+                }
+            );
+
+        answer(
+            "Hoy es " + date + ", señor."
+        );
+
+        return;
+    }
+
+
+    // YOUTUBE
+
+    if (
+        command.includes("abre youtube") ||
+        command.includes("abrir youtube")
+    ) {
+
+        answer("Abriendo YouTube, señor.");
+
+        setTimeout(function() {
+
+            window.location.href =
+                "https://www.youtube.com/";
+
+        }, 1500);
+
+        return;
+    }
+
+
+    // GOOGLE
+
+    if (
+        command.includes("busca ") ||
+        command.includes("buscar ")
+    ) {
+
+        let search = command
+            .replace("busca ", "")
+            .replace("buscar ", "")
+            .trim();
+
+        if (search.length > 0) {
+
+            answer(
+                "Buscando " +
+                search +
+                ", señor."
+            );
+
+            setTimeout(function() {
+
+                window.location.href =
+                    "https://www.google.com/search?q=" +
+                    encodeURIComponent(search);
+
+            }, 1500);
+
+            return;
+        }
+    }
+
+
+    // JARVIS
+
+    if (
+        command.includes("quién eres") ||
+        command.includes("quien eres")
+    ) {
+
+        answer(
+            "Soy J.A.R.V.I.S., su asistente personal."
+        );
+
+        return;
+    }
+
+
+    // AYUDA
+
+    if (
+        command.includes("ayuda") ||
+        command.includes("qué puedes hacer") ||
+        command.includes("que puedes hacer")
+    ) {
+
+        answer(
+            "Puedo decirle la hora y la fecha, abrir YouTube, realizar búsquedas y responder a algunos comandos básicos."
+        );
+
+        return;
+    }
+
+
+    // COMANDO DESCONOCIDO
+
+    answer(
+        "No he entendido la orden, señor. Puede decirme que busque algo, abrir YouTube, decirle la hora o preguntarme quién soy."
+    );
+}
+
+</script>
+
 </body>
-</html>
+    </html>
