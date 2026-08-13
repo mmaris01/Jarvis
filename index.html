@@ -14,7 +14,7 @@ body {
     margin: 0;
     min-height: 100vh;
     background:
-        radial-gradient(circle at center, #071b25 0%, #020609 45%, #000 100%);
+        radial-gradient(circle at center, #08212c 0%, #020609 45%, #000 100%);
     color: #00d9ff;
     font-family: Arial, sans-serif;
     overflow: hidden;
@@ -108,7 +108,6 @@ button {
     font-size: 15px;
     font-weight: bold;
     letter-spacing: 1px;
-    box-shadow: 0 0 15px rgba(0,217,255,0.3);
     cursor: pointer;
 }
 
@@ -204,7 +203,7 @@ button:active {
     </div>
 
     <div class="commands">
-        Prueba: "¿Qué hora es?", "abre YouTube",
+        Pruebe: "¿Qué hora es?", "abre YouTube",
         "busca Spider-Man", "hola Jarvis"
     </div>
 
@@ -217,76 +216,201 @@ const statusText = document.getElementById("status");
 const response = document.getElementById("response");
 const jarvis = document.getElementById("jarvis");
 
-let recognition;
+let recognition = null;
 
 const SpeechRecognition =
     window.SpeechRecognition ||
     window.webkitSpeechRecognition;
 
-if (SpeechRecognition) {
+
+/* =========================
+   COMPROBAR NAVEGADOR
+========================= */
+
+if (!SpeechRecognition) {
+
+    statusText.textContent = "NAVEGADOR NO COMPATIBLE";
+
+    response.textContent =
+        "Señor, este navegador no permite reconocimiento de voz.";
+
+    button.disabled = true;
+
+}
+
+
+/* =========================
+   CONFIGURAR MICRÓFONO
+========================= */
+
+else {
 
     recognition = new SpeechRecognition();
 
     recognition.lang = "es-ES";
+
     recognition.continuous = false;
+
     recognition.interimResults = false;
+
+    recognition.maxAlternatives = 1;
+
+
+    /* =========================
+       EMPIEZA A ESCUCHAR
+    ========================= */
 
     recognition.onstart = function() {
 
         jarvis.classList.add("listening");
 
-        statusText.textContent = "ESCUCHANDO...";
-        response.textContent = "Le escucho, señor.";
-        button.textContent = "🔵 ESCUCHANDO";
+        statusText.textContent =
+            "ESCUCHANDO...";
+
+        response.textContent =
+            "Le escucho, señor.";
+
+        button.textContent =
+            "🔵 ESCUCHANDO";
+
     };
+
+
+    /* =========================
+       RECIBE LA VOZ
+    ========================= */
 
     recognition.onresult = function(event) {
 
         const text =
-            event.results[0][0].transcript.toLowerCase();
+            event.results[0][0].transcript;
 
-        statusText.textContent = "PROCESANDO...";
+        statusText.textContent =
+            "ORDEN RECIBIDA";
 
-        processCommand(text);
+        response.textContent =
+            "Ha dicho: \"" + text + "\"";
+
+        processCommand(
+            text.toLowerCase()
+        );
+
     };
 
-    recognition.onerror = function() {
 
-        statusText.textContent = "ERROR DE MICRÓFONO";
-        response.textContent =
-            "No he podido escucharle, señor.";
+    /* =========================
+       ERROR
+    ========================= */
+
+    recognition.onerror = function(event) {
+
+        console.log(
+            "ERROR DEL MICRÓFONO:",
+            event.error
+        );
 
         jarvis.classList.remove("listening");
 
-        button.textContent = "🎙️ ACTIVAR JARVIS";
+        button.textContent =
+            "🎙️ ACTIVAR JARVIS";
+
+
+        statusText.textContent =
+            "ERROR: " + event.error;
+
+
+        if (event.error === "not-allowed") {
+
+            response.textContent =
+                "Señor, el acceso al micrófono ha sido bloqueado. Permita el micrófono en los permisos de Chrome.";
+
+        }
+
+        else if (event.error === "audio-capture") {
+
+            response.textContent =
+                "Señor, no puedo acceder al micrófono del dispositivo.";
+
+        }
+
+        else if (event.error === "no-speech") {
+
+            response.textContent =
+                "No he detectado ninguna voz, señor.";
+
+        }
+
+        else if (event.error === "network") {
+
+            response.textContent =
+                "Señor, ha ocurrido un problema de conexión.";
+
+        }
+
+        else {
+
+            response.textContent =
+                "Se ha producido un error: " +
+                event.error;
+
+        }
+
     };
+
+
+    /* =========================
+       TERMINA DE ESCUCHAR
+    ========================= */
 
     recognition.onend = function() {
 
         jarvis.classList.remove("listening");
 
-        button.textContent = "🎙️ ACTIVAR JARVIS";
+        button.textContent =
+            "🎙️ ACTIVAR JARVIS";
+
     };
 
-} else {
-
-    response.textContent =
-        "Su navegador no admite reconocimiento de voz.";
 }
 
 
-button.addEventListener("click", function() {
+/* =========================
+   BOTÓN
+========================= */
 
-    if (!recognition) return;
+button.addEventListener(
+    "click",
+    function() {
 
-    try {
-        recognition.start();
-    } catch (error) {
-        console.log(error);
+        if (!recognition) {
+
+            return;
+
+        }
+
+
+        try {
+
+            recognition.start();
+
+        }
+
+        catch (error) {
+
+            console.log(
+                "No se pudo iniciar:",
+                error
+            );
+
+        }
+
     }
+);
 
-});
 
+/* =========================
+   VOZ DE JARVIS
+========================= */
 
 function speak(text) {
 
@@ -295,34 +419,53 @@ function speak(text) {
     const voice =
         new SpeechSynthesisUtterance(text);
 
-    voice.lang = "es-ES";
-    voice.rate = 0.9;
-    voice.pitch = 0.9;
+    voice.lang =
+        "es-ES";
+
+    voice.rate =
+        0.9;
+
+    voice.pitch =
+        0.85;
+
+    voice.volume =
+        1;
 
     speechSynthesis.speak(voice);
+
 }
 
+
+/* =========================
+   RESPONDER
+========================= */
 
 function answer(text) {
 
-    statusText.textContent = "J.A.R.V.I.S. ACTIVO";
+    statusText.textContent =
+        "J.A.R.V.I.S. ACTIVO";
 
-    response.textContent = text;
+    response.textContent =
+        text;
 
     speak(text);
+
 }
 
 
+/* =========================
+   PROCESAR ÓRDENES
+========================= */
+
 function processCommand(command) {
 
-    console.log("Comando:", command);
 
-
-    // SALUDO
+    /* SALUDO */
 
     if (
         command.includes("hola") ||
-        command.includes("buenas")
+        command.includes("buenas") ||
+        command.includes("hey")
     ) {
 
         answer(
@@ -330,17 +473,20 @@ function processCommand(command) {
         );
 
         return;
+
     }
 
 
-    // HORA
+    /* HORA */
 
     if (
         command.includes("hora") ||
-        command.includes("qué hora")
+        command.includes("qué hora") ||
+        command.includes("que hora")
     ) {
 
-        const now = new Date();
+        const now =
+            new Date();
 
         const time =
             now.toLocaleTimeString(
@@ -352,19 +498,22 @@ function processCommand(command) {
             );
 
         answer(
-            "Son las " + time + ", señor."
+            "Son las " +
+            time +
+            ", señor."
         );
 
         return;
+
     }
 
 
-    // FECHA
+    /* FECHA */
 
     if (
         command.includes("fecha") ||
-        command.includes("día es hoy") ||
-        command.includes("qué día")
+        command.includes("qué día") ||
+        command.includes("que dia")
     ) {
 
         const date =
@@ -378,67 +527,17 @@ function processCommand(command) {
             );
 
         answer(
-            "Hoy es " + date + ", señor."
+            "Hoy es " +
+            date +
+            ", señor."
         );
 
         return;
+
     }
 
 
-    // YOUTUBE
-
-    if (
-        command.includes("abre youtube") ||
-        command.includes("abrir youtube")
-    ) {
-
-        answer("Abriendo YouTube, señor.");
-
-        setTimeout(function() {
-
-            window.location.href =
-                "https://www.youtube.com/";
-
-        }, 1500);
-
-        return;
-    }
-
-
-    // GOOGLE
-
-    if (
-        command.includes("busca ") ||
-        command.includes("buscar ")
-    ) {
-
-        let search = command
-            .replace("busca ", "")
-            .replace("buscar ", "")
-            .trim();
-
-        if (search.length > 0) {
-
-            answer(
-                "Buscando " +
-                search +
-                ", señor."
-            );
-
-            setTimeout(function() {
-
-                window.location.href =
-                    "https://www.google.com/search?q=" +
-                    encodeURIComponent(search);
-
-            }, 1500);
-
-            return;
-        }
-    }
-
-
-    // JARVIS
+    /* QUIÉN SOY */
 
     if (
         command.includes("quién eres") ||
@@ -450,10 +549,78 @@ function processCommand(command) {
         );
 
         return;
+
     }
 
 
-    // AYUDA
+    /* YOUTUBE */
+
+    if (
+        command.includes("abre youtube") ||
+        command.includes("abrir youtube")
+    ) {
+
+        answer(
+            "Abriendo YouTube, señor."
+        );
+
+        setTimeout(
+            function() {
+
+                window.location.href =
+                    "https://www.youtube.com/";
+
+            },
+            1500
+        );
+
+        return;
+
+    }
+
+
+    /* GOOGLE */
+
+    if (
+        command.startsWith("busca ") ||
+        command.startsWith("buscar ")
+    ) {
+
+        let search =
+            command
+            .replace("busca ", "")
+            .replace("buscar ", "")
+            .trim();
+
+
+        if (search.length > 0) {
+
+            answer(
+                "Buscando " +
+                search +
+                ", señor."
+            );
+
+
+            setTimeout(
+                function() {
+
+                    window.location.href =
+                        "https://www.google.com/search?q=" +
+                        encodeURIComponent(search);
+
+                },
+                1500
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    /* AYUDA */
 
     if (
         command.includes("ayuda") ||
@@ -462,18 +629,37 @@ function processCommand(command) {
     ) {
 
         answer(
-            "Puedo decirle la hora y la fecha, abrir YouTube, realizar búsquedas y responder a algunos comandos básicos."
+            "Actualmente puedo decirle la hora y la fecha, abrir YouTube, hacer búsquedas y responder a varios comandos."
         );
 
         return;
+
     }
 
 
-    // COMANDO DESCONOCIDO
+    /* APAGAR */
+
+    if (
+        command.includes("apágate") ||
+        command.includes("apagarte") ||
+        command.includes("apaga")
+    ) {
+
+        answer(
+            "Entrando en modo de espera, señor."
+        );
+
+        return;
+
+    }
+
+
+    /* NO ENTENDIDO */
 
     answer(
-        "No he entendido la orden, señor. Puede decirme que busque algo, abrir YouTube, decirle la hora o preguntarme quién soy."
+        "No he entendido la orden, señor."
     );
+
 }
 
 </script>
